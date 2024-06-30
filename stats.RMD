@@ -1,0 +1,385 @@
+---
+title: "Linear Algebra"
+author: "Jeffrey Strickland"
+date: "2024-05-26"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Linear algebra in R
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(broom)
+
+options(digits = 4)
+set.seed(1234)
+theme_set(theme_minimal())
+```
+
+## Vectors and Matricies in R
+
+Matrix algebra provides an elegant way of representing both the data the kind of operations on tables or arrays that frequently come up in data analysis, and when implemented numerically, matrix algebra also provides efficient an means of carrying those operations out. The following is a brief introduction to matrix algebra as implemented in **R**. 
+
+## Vector Algebra
+
+We can create a vector **c**: a vector is simply a matrix with the size of one dimension equal to 1. The expression below defines a list of integers 1...9 and is neither a vector or a matrix.
+
+```{r}
+c <- c(1,2,3,4,5,6,7,8,9)
+c
+```
+
+We can check the claim tan `c` is not a matrix using the **R** `class()` function, which returns class attributes of an object. Here, the class is "numeric", i.e., neither a vector or matrix.
+
+```{r}
+class(c)
+```
+
+So, a this point, $c$ is just a list of numbers of the class `numeric`. The `as.matrix()` function creates a 9 row by 1 column vector, $\vec{c}$ of the class `matrix` or `array` which can be verified by the `dim()` function. We should distinguish between a row vector (a $1×n$ matrix) and a column vector (a $n×1$ matrix).  Recall that we change a row vector $x$ into a column vector using the transpose operator x' in **R**. The same transformation works for changing a column vector into a row vector.
+
+Now, a vector is also a row matrix. For our example, vector c is a one row matrix with nine elements, $a_1, a_2,...a_9$. We can take our original list of numbers transform them into a matrix with dimensions 1 row by 9 columns
+```{r}
+c <- as.matrix(c)
+class(c)
+```
+
+Determine the dimension of $\vec{c}$:
+
+```{r}
+dim(c)
+```
+
+Now, determine the dimension of $\vec{d}$:
+
+```{r}
+d <- as.matrix(c(1,-1,0,1,-1,0,1,1,-1))
+dim(d)
+```
+
+Add $\vec{c}$ and $\vec{d}$:
+```{r}
+c+d
+```
+
+Multiply $\vec{c}$ and $\vec{d}$ (also called the dot product):
+Also, find the dot product $\vec{c}$ and $\vec{d}'$ 
+```{r}
+c*d
+t(c)*t(d)
+```
+
+Find the cross product of $\vec{c}$ and $\vec{d}$, writen as $\vec{c} x \vec{d}$
+
+```{r}
+crossprod(c,d)
+```
+
+The vector $\vec{c}$ has 9 rows and 1 column.
+
+A vector $\vec{c}$ can be reshaped into a matrix, **C**:
+
+```{r}
+C <- matrix(c, nrow = 3, ncol = 3)
+C
+```
+
+Create the matrix A below, and validate its class.
+$$A = \begin{bmatrix}6 & 13\\
+9 & 13\\
+12 & 5
+\end{bmatrix}$$
+
+A vector can also be created from a single row or column of a matrix:
+
+Extract the vector from column 1.
+
+```{r}
+A <- matrix(c(6, 9, 12, 13, 21, 5), nrow = 3, ncol = 2)
+class(A)
+a1 <- as.matrix(A[, 1]) # vector from column 1
+a1
+```
+
+```{r}
+dim(a1)
+```
+
+$a_1$ is a 3 row by 1 column column vector.
+
+## Basic matrix definitions in **R**
+
+Create the 3 row by 2 column matrix **A**: 
+
+$$A = \begin{bmatrix}6 & 13\\
+9 & 21\\
+12 & 5
+\end{bmatrix}$$
+
+Note the use of the concatenation `c()` function to collect the individual matrix elements (the $a_{ij}’s$) together, and the default fill order `(byrow = FALSE)`, which implies filling the matrix by columns:
+
+```{r}
+A <- matrix(c(6, 9, 12, 13, 21, 5), nrow = 3, ncol = 2, byrow = TRUE)
+A
+```
+
+```{r}
+class(A)
+```
+
+The `class()` function indicates that `A` is indeed a matrix (as opposed to a data frame).
+
+Create another matrix, **B**, with the same elements, only filled by row this time:
+
+$$B = \begin{bmatrix}6 & 9\\
+12 & 13\\
+21 & 5
+\end{bmatrix}$$
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the **R** code that generated the plot.
+
+```{r}
+B <-  matrix(c(6, 9, 12, 13, 21, 5), nrow = 3, ncol = 2, byrow = TRUE)
+B
+```
+
+Individual matrix elements can be reference using the **square-bracket selection** rules.
+
+*   Find row 1, column 2.
+
+```{r}
+A[1, 2] # row 1, col 2
+```
+
+*   Find row 2, column 1.
+
+```{r}
+A[2, 1] # row 2, col 1
+```
+
+*   Find all elements in row 2.
+
+```{r}
+A[2, ] # all elements in row 2
+```
+
+*   Find all elements in column 2.
+
+```{r}
+A[, 2] # all elements in column 2
+```
+
+## Matrix operations
+
+Transposition `t()` flips the rows and columns of a matrix, such that a 3 by 2 matrix **A**, becomes a 2 by 3 matrix, $\mathsf{\mathbf{A^T}}$ or **A'**:
+
+$$A = \begin{bmatrix}6 & 12 & 21\\
+9 & 13 & 5
+\end{bmatrix}$$
+
+```{r}
+A
+```
+
+Find the transpose of the matrix **A**
+
+```{r}
+t(A)
+```
+
+$$C = \begin{bmatrix}-1 & 2 & -1\\
+0 & 2 & 4
+\end{bmatrix}$$
+
+$$A = \begin{bmatrix}6 & 12 & 21\\
+9 & 13 & 5
+\end{bmatrix}$$
+
+```{r}
+C
+```
+
+With $$C = \begin{bmatrix}1 & 1 & 3\\
+4 & 5 & 6\\
+7 & 8 & 9
+\end{bmatrix}$$
+
+Find C'
+
+```{r}
+t(C)
+```
+
+Vectors can also be transposed, which simply turns a column vector, e.g. $a_1$ into a row vector
+
+```{r}
+a1t <- t(a1)
+a1t
+```
+
+```{r}
+dim(a1t)
+```
+
+## Matrix algebra
+
+Matrix algebra is basically analogous to scalar algebra (with the exception of division), and obeys most of the same rules that scalar algebra does.
+
+Add two matrices, **A** and **B**:
+
+```{r}
+F <- A + B
+F
+```
+
+Note that the individual elements of **A** and **B** are simply added together to produce the corresponding elements of **F** (i.e. $f_{ij} = a_{ij} + b_{ij}$).
+
+In order to be added together, the matrices have to be of the same shape (i.e. have the same number of rows and columns). The shape of a matrix can be verified using the `dim()` function:
+
+```{r}
+dim(C)
+```
+
+```{r}
+dim(A)
+```
+
+Here, **A** and **C** are not the same shape, and the following code, if executed, would product an error message:
+
+```{r, error=TRUE}
+G <- A + C
+```
+
+Scalar multiplication, using $*$ operator, involves multiplying each element of a matrix by a scalar value:
+
+```{r}
+H <- 0.5 * A
+H
+```
+
+Here, $h_{ij} = 0.5 × a_{ij}$. Element-by-element multiplication is also possible for identically shaped matrices, e.g., $p_{ij} = a_{ij} × b_{ij}$:
+
+```{r}
+P <- A * B
+P
+```
+
+## Matrix multiplication
+
+**Matrix multiplication** results in a a set of sums and crossproducts, as opposed to element-by-element products. Matrix multiplication is symbolized by the `%*%` operator:
+
+```{r}
+Q <- C %*% A
+Q
+```
+
+```{r}
+dim(C)
+```
+
+```{r}
+dim(A)
+```
+
+Note that the matrices have to be **conformable**, as they are here (the number of columns of the first matrix must equal the number of rows of the second, and the product matrix **Q** here has the number of rows of the first matrix and the number of columns of the second).
+
+The matrices **A** and **B** are not conformable for multiplication; although they have the same shape, they are not square, and the following code would produce an error:
+
+```{r, error=TRUE}
+T <- A %*% B
+```
+
+```{r}
+dim(A)
+```
+
+```{r}
+dim(B)
+```
+
+## Special matricies
+
+There are a number of special matrices that come up in data analysis. Here **D**  is a **diagonal matrix**, with non-zero values along the principal diagonal, and zeros elsewhere:
+
+```{r}
+D <- diag(c(6,2,1,3), nrow = 4, ncol = 4)
+D
+```
+
+A special form of a diagonal matrix is the **identity matrix I**, which has ones along the principal diagonal, and zeros elsewhere:
+
+```{r}
+I <- diag(1, nrow = 4, ncol = 4)
+I
+```
+
+A special **scalar** that appears often in practice is the **norm** (or **Euclidean norm**) of a vector, which is simply the square root of the sum of squares of the elements of the vector:
+
+```{r}
+anorm <- sqrt(t(a1) %*% a1)
+anorm
+```
+
+It can be verified that sqrt(sum(a1^2)) = **16.155**.
+
+## Inverting matricies
+
+The matrix algebra equivalent of division is the multiplication of one matrix by the inverse of another. Invertible matrices must be square and have a non-zero determinant. Consider the following matrix **R**:
+
+```{r}
+R <- matrix(c(0, 9, 3, 2, 2, 1, 9, 4, 4), nrow = 3, ncol = 3)
+R
+```
+
+The inverse of the matrix **R**, **R−1**, is obtained using the `solve()` function:
+
+```{r}
+Rinv <- solve(R)
+Rinv
+```
+
+As in scalar division, where $a × \frac{1}{a} = 1$, postmuliplying a matrix by its inverse yields the Identity matrix, $I$:
+
+```{r}
+D <- R %*% Rinv
+D
+```
+
+After rounding using the `zapsmall()` function $D$ indeed equals $I$:
+
+```{r}
+zapsmall(D)
+```
+
+## Eigenvectors and eigenvalues
+
+An important concept that comes up in multivariate analysis is the **decomposition** of a matrix, into another square matrix, **E**, and a diagonal matrix, **V**, that each have some desirable properties, and which make the following statement true: $**RE**=**EV**$, where **V** is a diagonal matrix with the elements $v_i$ along the diagonal. The matrix **E** contains the **eigenvectors** of **R**, while the $v_i$’s are the eigenvalues of **R**.
+
+```{r}
+E <- eigen(R)
+E
+```
+
+
+## Acknowledgements
+
+Drawn from Data wrangling and matrix algebra
+
+## Session Info
+
+```{r}
+#install.packages("devtools")
+library(devtools)
+```
+
+```{r}
+#devtools::session_info()
+```

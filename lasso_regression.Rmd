@@ -1,0 +1,239 @@
+---
+title: "Lasso Rgression"
+author: "Jeffrey Strickland"
+date: "2024-06-02"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(glmnet)
+train<-read.csv("C:\\Users\\jeff\\Documents\\Data\\Survive.csv") #Import the train set
+
+train$RSO_Weight[is.na(train$RSO_Weight)] <- mean(train$RSO_Weight, na.rm = TRUE)
+train$RSO_Density[is.na(train$RSO_Density)] <- "Low"
+train$RSO_Visibility[train$RSO_Visibility == 0] <- mean(train$RSO_Visibility)
+train$RSO_MRP[is.na(train$RSO_MRP)] <- mean(train$RSO_MRP, na.rm = TRUE)
+train$Orbit_Estab_Year=2013 - train$Orbit_Estab_Year
+train$Orbit_Height[is.na(train$Orbit_Height)] <- "LEO"
+train$Stealth_Type[is.na(train$Stealth_Type)] <- "Stealth_1"
+train$RSO_Type[is.na(train$RSO_Type)] <- "RSO_Type1"
+```
+
+### Define the Features and Response Sets
+Now, that we have imputed missing values, we need to define the set of features and the response, Y.
+
+```{r}
+train<-train[c(-1)]
+Y<-train[c(11)]
+```
+
+### Matricize the Data
+Next, we take the response and the features an form a model matrix, X.
+
+```{r}
+X <- model.matrix(Survivability~., train)
+```
+
+### Define Lambda
+We also need to define the initial value of lambda and the stop and step values that we'll iterate through, and plot the values.
+
+```{r, fig.width=5, fig.height=3.5, dpi=330}
+#lambda <- 10^seq(0, -3, by = -.05)
+lambda <- 10^seq(10, -2, length = 100)
+plot(lambda, col="green3", lwd=2)
+```
+
+### Split the Data into Subsets 
+Finally, we split the set into the training set and the cross-validation set, which will complete our data preprocessing.
+
+```{r}
+set.seed(567)
+part <- sample(2, nrow(X), replace = TRUE, prob = c(0.7, 0.3))
+X_train<- X[part == 1,]
+X_cv<- X[part == 2,]
+
+X_train <- as.matrix(X_train)
+X_cv <- as.matrix(X_cv)
+
+Y_train<- Y[part == 1,]
+Y_cv<- Y[part == 2,]
+```
+
+## Lasso Regression Model Construction
+Here, we also use the glmnet function to build the lasso regression model and use it to predict future values.
+
+
+```{r}
+lasso_reg <- glmnet(X_train, Y_train, alpha = 1, lambda = lambda, type.measure = "mse")
+bestlam <- lasso_reg$lambda.min
+```
+
+
+# MODEL 6: Lasso Regression
+We again construct a lasso regression model but with different lambda value settings and a search for the optimal lambda.
+
+```{r}
+lambdas <- 10^seq(0, -3, by = -.05)
+#lambda <- 10^seq(10, -2, length = 100)
+
+cv_lasso <- cv.glmnet(X[X_train,], Y[X_train], alpha = 1, lambda = lambdas)
+optimal_lambda <- cv_lasso$lambda.min
+optimal_lambda
+par(mar=c(4,4,1,1))
+plot(lambdas,cv_lasso$cvm,ylab="Mean-Squared Error",xlab="Lambda",  type="l", lwd=3, col="dodgerblue") 
+lasso_reg = glmnet(X_train, Y_train,  alpha = 1, family = 'gaussian', lambda = optimal_lambda, thresh = 1e-07)
+summary(lasso_reg)
+coef(lasso_reg)
+```
+## Model Evaluation
+Here, we write a function to calculate R-squared and RMSE.
+
+```{r}
+eval_results <- function(true, predicted, df) {
+  SSE <- sum((predicted - true)^2)
+  SSR <- sum((true - mean(true))^2)
+  SST<-SSR+SSE
+  R_square <- SSR / SST
+  RMSE = sqrt(SSE/nrow(df))
+  return(data.frame(
+  RMSE = RMSE,
+  Rsquare = R_square
+))}
+
+# Prediction and evaluation on train data
+predictions_train <- predict(lasso_reg, s = optimal_lambda, newx = X_train)
+res1<-eval_results(Y_train, predictions_train, train)
+print(res1)
+
+# Prediction and evaluation on test data
+predictions_cv <- predict(lasso_reg, s = optimal_lambda, newx = X_cv)
+res2<-eval_results(Y_cv, predictions_cv, X_cv)
+print(paste("Lasso Regression Model =", res1))
+print(paste("Lasso Cross Validation =", res2))
+```
+
+```{r, fig.width=6, fig.height=4, dpi=330}
+par(mar=c(10,4,2,1))
+lasso.coef<-predict(lasso_reg, type = "coefficients", s = bestlam)[1:43,]
+barplot(lasso.coef, main="Model 6 Coefficients",ylab="Coefficients",las=2, cex=.75, cex.lab=.75, cex.main=1.25, cex.sub=.75, cex.axis=.75, las=2, col="#acfffd")
+```
+The results show that Model 6 is the best fit thus far, with a RMSE of approximately 925 and an R-squared of 0.71. This means that the model features explain 71% of the variation in the Survivability measure.
+
+```{r}
+library(caret)
+V = varImp(lasso_reg, lambda=0.0001)
+#Insert new column
+s <- nrow(V)
+new <- seq(s)
+V$Variables <- new
+#Remove insignificant Overall importance values
+#Insignificant values < median value
+#Transform from numerical to logical
+V_log<-V>median(V$Overall) 
+V1_log<-V_log==TRUE
+#Transform to (0,1)
+V2=V1_log-FALSE
+#Transform to numerical with insignificant = 0
+V3=V*V2
+#Convert to data frame
+V4<-as.data.frame(V3)
+#Remove rows containing 0 overall values
+V5 <- V4[!(V4$Overall ==0),]
+#Convert to data frame
+V5<-as.data.frame(V5)
+#Rename "V5" column to "Overall"
+names(V5)[1] <- paste('Overall')
+#Count variable reduction
+nrow(V)
+nrow(V)-nrow(V5)
+```
+
+```{r, fig.width=6, fig.height=4, dpi=330}
+my_ggp <- ggplot2::ggplot(V5, aes(x=reorder(rownames(V5),Overall), y=Overall)) +
+  geom_point(aes(color=(factor(rownames(V5)))), size=5, alpha=0.6) +
+  geom_segment(aes(x=rownames(V5), y=0 , xend=rownames(V5), yend=Overall),
+               color='skyblue', size = 1.5) +
+  ggtitle("Variable Importance using Lasso Regression") +
+  guides(color = guide_legend(title = "Important Variables")) +
+  xlab('') +  ylab('Overall Importance') + 
+  coord_flip()
+
+my_ggp + theme_light() + 
+  theme(axis.title = element_text(size = 14))  +
+  theme(axis.text = element_text(size = 12)) +
+  theme(plot.title = element_text(size = 14)) +
+  theme(legend.title = element_text(size = 13)) +
+  theme(legend.text = element_text(size = 11)) 
+```
+
+```{r}
+V = varImp(lasso_reg, lambda=0.0001)
+#Insert new column
+s <- nrow(V)
+new <- c("Intercept",
+        "RSO_Weight",
+        "RSO_Density",
+        "RSO_Visibility",
+        "RSO_Name",
+        "RSO_MRP",
+        "Orbit_ID",
+        "Orbit_Estab_Year",
+        "Orbit_Height",
+        "Stealth_Type",
+        "RSO_Type",
+        "Survivability",
+        "Orbit_Estab_Year",
+        "RSO_Weight",
+        "RSO_Density",
+        "RSO_Visibility",
+        "RSO_Name",
+        "RSO_MRP",
+        "Orbit_ID",
+        "Orbit_Estab_Year",
+        "Orbit_Height",
+        "Stealth_Type",
+        "RSO_Type",
+        "Survivability",
+        "Orbit_Estab_Year",
+        "RSO_Weight",
+        "RSO_Density",
+        "RSO_Visibility",
+        "RSO_Name",
+        "RSO_MRP",
+        "Orbit_ID",
+        "Orbit_Estab_Year",
+        "Orbit_Height",
+        "Stealth_Type",
+        "RSO_Type",
+        "Survivability",
+        "Orbit_Estab_Year",
+        "RSO_Weight",
+        "RSO_Density",
+        "RSO_Visibility",
+        "RSO_Name",
+        "RSO_MRP",
+        "Orbit_Identifier")
+
+V$Variables <- new
+```
+
+
+```{r}
+lasso.coef<-predict(lasso_reg, type = "coefficients", s = bestlam)[1:43,]
+print(paste("Variable: Intercept =",lasso.coef[1]))
+print(paste("Variable:", names(train),"=",lasso.coef[2:43]))
+```
+
+# Prediction and evaluation on train data.
+
+```{r}
+predictions_train4 <- predict(lasso_reg, newx = X_train)
+res4 <- eval_results(Y_train, predictions_train4, X_train)
+print(paste("model-4 RMSE:", round(res4$RMSE,4), "| Model-4 R2:", round(res4$Rsquare,4))) 
+```
+
